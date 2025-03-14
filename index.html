@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caption Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Generate Captions from Video</h2>
+        <input type="file" id="videoInput" accept="video/*">
+        <select id="language">
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Spanish</option>
+            <option value="fr-FR">French</option>
+        </select>
+        <video id="video" controls></video>
+        <button id="startBtn">Generate Captions</button>
+        <h3>Generated Captions (JSON)</h3>
+        <pre id="captionsOutput"></pre>
+    </div>
+    <script>
+        document.getElementById("startBtn").addEventListener("click", () => {
+            const video = document.getElementById("video");
+            const language = document.getElementById("language").value;
+            const captionsOutput = document.getElementById("captionsOutput");
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Your browser does not support Speech Recognition.");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = language;
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.start();
+
+            let captions = [];
+            let position = 0;
+            let previousTime = video.currentTime;
+
+            recognition.onresult = (event) => {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const words = event.results[i][0].transcript.trim().split(" ");
+                    let startTime = previousTime;
+                    
+                    words.forEach((word, index) => {
+                        let endTime = video.currentTime; 
+                        captions.push({
+                            word: word,
+                            start: startTime,
+                            end: endTime,
+                            position: position,
+                            matched: false
+                        });
+                        startTime = endTime;
+                        position++;
+                    });
+                }
+                captionsOutput.textContent = JSON.stringify(captions, null, 2);
+                previousTime = video.currentTime;
+            };
+
+            video.play();
+            video.ontimeupdate = () => (previousTime = video.currentTime);
+        });
+
+        document.getElementById("videoInput").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const videoURL = URL.createObjectURL(file);
+                document.getElementById("video").src = videoURL;
+            }
+        });
+    </script>
+</body>
+</html>
