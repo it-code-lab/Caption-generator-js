@@ -36,18 +36,18 @@
             recognition.lang = language;
             recognition.continuous = true;
             recognition.interimResults = false;
-            recognition.start();
-
+            recognition.maxAlternatives = 1;
+            
             let captions = [];
             let position = 0;
             let previousTime = video.currentTime;
-
+            
             recognition.onresult = (event) => {
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const words = event.results[i][0].transcript.trim().split(" ");
                     let startTime = previousTime;
                     
-                    words.forEach((word, index) => {
+                    words.forEach((word) => {
                         let endTime = video.currentTime; 
                         captions.push({
                             word: word,
@@ -63,7 +63,21 @@
                 captionsOutput.textContent = JSON.stringify(captions, null, 2);
                 previousTime = video.currentTime;
             };
-
+            
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event);
+                if (event.error === "no-speech" || event.error === "network") {
+                    recognition.stop();
+                    setTimeout(() => recognition.start(), 1000); // Restart recognition after 1 second if stopped
+                }
+            };
+            
+            recognition.onend = () => {
+                console.log("Speech recognition stopped, restarting...");
+                recognition.start(); // Restart recognition to ensure continuous capturing
+            };
+            
+            recognition.start();
             video.play();
             video.ontimeupdate = () => (previousTime = video.currentTime);
         });
